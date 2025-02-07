@@ -1,5 +1,7 @@
+<div><img src="./docs/images/main.webp" /></div>
+<div align="center">さくらのレンタルサーバーにインストールしたWordPressの情報を記録するツール</div>
+
 # ohanami
-さくらのレンタルサーバーにインストールしたWordPressの情報を記録するツール
 
 以下のワンライナーをさくらのレンタルサーバーでCronに登録します。
 
