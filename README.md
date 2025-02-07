@@ -4,5 +4,5 @@
 以下のワンライナーをさくらのレンタルサーバーでCronに登録します。
 
 ```bash
-curl -L https://raw.githubusercontent.com/tarosky/ohanami/refs/heads/main/ohanami.php | php
+curl -L https://raw.githubusercontent.com/tarosky/ohanami/main/ohanami.php | php
 ```
