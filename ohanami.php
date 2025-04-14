@@ -9,8 +9,11 @@
  * @see https://github.com/tarosky/ohanami
  */
 
-// 出力先ディレクトリ。絶対パス指定が必要かも
-$output_dir = '/www/ohanami-data/';
+// さくらのレンタルサーバーのアカウント名を取得する
+$account_name = exec( 'whoami' );
+
+// 出力先ディレクトリ
+$output_dir = 'home/' . $account_name . '/ohanami-data/';
 // 出力先ファイル
 $output_file = 'ohanami-result.txt';
 
@@ -60,8 +63,8 @@ function ohanami_scan_directory( $dir ) {
 	return $result;
 }
 
-// スキャン対象のディレクトリ。絶対パス指定が必要かも
-$scan_dir = '/www';
+// スキャン対象のディレクトリ
+$scan_dir = 'home/' . $account_name . '/www/';
 $result = ohanami_scan_directory( $scan_dir );
 // すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
 file_put_contents( $output_dir . $output_file, implode( PHP_EOL, $result ) );
