@@ -1,0 +1,9 @@
+{
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "env": { "browser": true },
+  "rules": {
+    // []の第１引数に【error/warn/off】のいずれかを設定する。
+    // []の第２引数に、rule固有のOptionを定義する。semiだと"never"だというOptionがある。
+    "semi": ["error", "never"]
+  }
+}
