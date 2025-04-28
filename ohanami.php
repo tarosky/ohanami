@@ -2,18 +2,19 @@
 /**
  * さくらのレンタルサーバーのWordPress情報を出力する
  *
- * ここに説明
+ * さくらの ~/www をスキャンして一覧を安全な場所にテキストファイルとして出力する
  *
  * @author TAROSKY
  * @version 0.1.0
  * @see https://github.com/tarosky/ohanami
  */
 
-// さくらのレンタルサーバーのアカウント名を取得する
-$account_name = exec( 'whoami' );
+// ホームディレクトリを取得
+$info = posix_getpwuid( posix_getuid() );
+$home_dir = rtrim( $info['dir'], DIRECTORY_SEPARATOR );
 
-// 出力先ディレクトリ
-$output_dir = 'home/' . $account_name . '/ohanami-data/';
+// 出力先ディレクトリ もしもディレクトリを直で指定する場合、始まりが home/ だと失敗するので要注意。 正：/home/ 誤：home/
+$output_dir = $home_dir . '/ohanami-data/';
 // 出力先ファイル
 $output_file = 'ohanami-result.txt';
 
@@ -64,8 +65,8 @@ function ohanami_scan_directory( $dir ) {
 }
 
 // スキャン対象のディレクトリ
-$scan_dir = 'home/' . $account_name . '/www/';
+$scan_dir = $home_dir . '/www/';
 $result = ohanami_scan_directory( $scan_dir );
+
 // すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
 file_put_contents( $output_dir . $output_file, implode( PHP_EOL, $result ) );
-
