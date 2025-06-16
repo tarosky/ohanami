@@ -9,6 +9,8 @@
 4. 認証するとプロンプトに、どのプロジェクトを選択するかなど求められるので選択して、承認ステップを完了します。
 5. 全て完了したら、 `gcloud config list` で正しい状態になっているか確認します。
 
+その他、「[gcloud CLI](https://cloud.google.com/sdk/docs/initializing?hl=ja)」の詳細は公式ドキュメントをご確認ください。
+
 ## デプロイ方法
 
 デプロイ方法は現状2種類あります。
@@ -16,7 +18,7 @@
 ### シェルスクリプトから実行
 
 1. `.env.example` をコピーして、 `.env` を作成
-2. `.env` に実際の設定値を入力 (社内向けREADME参照)
+2. `.env` に実際の設定値を入力 (Slackの社内向けREADME参照)
 3. `chmod +x deploy_google_cloud.sh`
 4. `./deploy_google_cloud.sh` を実行
 
