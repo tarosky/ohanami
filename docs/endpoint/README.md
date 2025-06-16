@@ -1,5 +1,14 @@
 # Cloud Runにセットアップしたエンドポイントについて
 
+## Google Cloudセットアップ方法
+
+1. gcloud CLIをインストールします。 `brew install google-cloud-sdk`
+2. gcloudを初期化 & 認証します。 `gcloud init`
+   1. `gcloud auth login` や `gcloud auth activate-service-account` で個別に認証も出来ます。
+3. ブラウザが立ち上がるので、会社で使っているGoogleアカウントでログインします。
+4. 認証するとプロンプトに、どのプロジェクトを選択するかなど求められるので選択して、承認ステップを完了します。
+5. 全て完了したら、 `gcloud config list` で正しい状態になっているか確認します。
+
 ## デプロイ方法
 
 デプロイ方法は現状2種類あります。
@@ -7,8 +16,9 @@
 ### シェルスクリプトから実行
 
 1. `.env.example` をコピーして、 `.env` を作成
-2. `.env` に実際の設定値を入力
-3. `./deploy_google_cloud.sh` を実行
+2. `.env` に実際の設定値を入力 (社内向けREADME参照)
+3. `chmod +x deploy_google_cloud.sh`
+4. `./deploy_google_cloud.sh` を実行
 
 ### コマンド
 
