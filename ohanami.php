@@ -37,7 +37,7 @@ if ( ! chmod( $output_dir, 0700 ) ) {
  *
  * @return array
  */
-function ohanami_scan_directory( $dir ) {
+function ohanami_scan_directory( string $dir ) {
 	$result = [];
 	// 末尾にスラッシュがついていたら後続の処理でスラッシュが重複するので取り除く
 	$dir = rtrim( $dir, '/' );
@@ -58,7 +58,7 @@ function ohanami_scan_directory( $dir ) {
 			}
 		} else {
 			// ファイルがwp-load.phpかどうかチェックする
-			if ( $file === 'wp-load.php' ) {
+			if ( 'wp-load.php' === $file ) {
 				// 同階層にwp-config.phpがあるかどうか wp-config.php は「一つ上の階層でもオッケー」というルールがあるためチェックする
 				if ( file_exists( $dir . '/wp-config.php' ) || file_exists( dirname( $dir ) . '/wp-config.php' ) ) {
 					// wp-load.phpとwp-config.phpが同階層もしくはwp-config.phpが一つ上の階層にあるならば、ここはWordPressのインストールディレクトリ
