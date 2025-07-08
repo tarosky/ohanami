@@ -31,13 +31,13 @@ if ( ! chmod( $output_dir, 0700 ) ) {
 }
 
 /**
- * ディレクトリを再帰的にスキャンしファイルの名前を取得する
+ * ディレクトリを再帰的にスキャンしてWordPressのインストールディレクトリを取得する
  *
  * @param $dir string スキャン対象ディレクトリ
  *
  * @return array
  */
-function ohanami_scan_directory( $dir ) {
+function ohanami_scan_directory( string $dir ) {
 	$result = [];
 	// 末尾にスラッシュがついていたら後続の処理でスラッシュが重複するので取り除く
 	$dir = rtrim( $dir, '/' );
@@ -51,13 +51,20 @@ function ohanami_scan_directory( $dir ) {
 
 		$path = $dir . '/' . $file;
 		if ( is_dir( $path ) ) {
-			// ディレクトリならば末尾に / をつけて格納する
-			$result[] = $path . '/';
 			// サブディレクトリを再帰的にスキャンする
 			$sub_results = ohanami_scan_directory( $path );
-			$result = array_merge( $result, $sub_results );
+			foreach ( $sub_results as $sub ) {
+				$result[] = $sub;
+			}
 		} else {
-			$result[] = $path;
+			// ファイルがwp-load.phpかどうかチェックする
+			if ( 'wp-load.php' === $file ) {
+				// 同階層にwp-config.phpがあるかどうか wp-config.php は「一つ上の階層でもオッケー」というルールがあるためチェックする
+				if ( file_exists( $dir . '/wp-config.php' ) || file_exists( dirname( $dir ) . '/wp-config.php' ) ) {
+					// wp-load.phpとwp-config.phpが同階層もしくはwp-config.phpが一つ上の階層にあるならば、ここはWordPressのインストールディレクトリ
+					$result[] = $dir;
+				}
+			}
 		}
 	}
 
