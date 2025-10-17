@@ -112,8 +112,8 @@ class WordPressCollector
                 'errors' => []
             ];
             
-            // WordPressが正常にインストールされているかチェック（古いWordPressでも継続）
-            $coreInstalled = $this->execWpCli('core is-installed', $sitePath);
+            // WordPressが正常にインストールされているかチェック（終了コードベース）
+            $coreInstalled = $this->checkWpCoreInstalled($sitePath);
             
             if (!$coreInstalled) {
                 // wp-cliが使えない場合でも基本情報は記録
@@ -333,6 +333,25 @@ class WordPressCollector
                 'auto_update' => $theme['auto_update'] ?? 'off'
             ];
         }, $themes);
+    }
+    
+    /**
+     * WordPress coreがインストールされているかチェック（終了コードベース）
+     *
+     * @param string $sitePath
+     * @return bool
+     */
+    private function checkWpCoreInstalled(string $sitePath): bool
+    {
+        $fullCommand = sprintf('cd %s && %s core is-installed 2>/dev/null', 
+            escapeshellarg($sitePath), 
+            $this->wpCliPath
+        );
+        
+        exec($fullCommand, $output, $exitCode);
+        
+        // wp core is-installedは成功時にexit code 0、失敗時に1を返す
+        return $exitCode === 0;
     }
     
     /**
