@@ -46,6 +46,7 @@ foreach ( $install_dir_array as $install_dir ) {
 		];
 }
 
+// 出力テスト。実際にはjsonで渡す
 $text_output = [];
 foreach ( $ohanami_results as $result ) {
 	$text_output[] = $result['path'] . ' => ' . $result['version'] . ' Plugin_list: ' . $result['plugin'];
@@ -129,5 +130,12 @@ function ohanami_get_wp_plugin_list( string $dir ) {
 		return [ 'error' => 'コマンド実行失敗' ];
 	}
 
-	return json_decode( trim( $output ), true );
+	$output = json_decode( trim( $output ), true );
+
+	// JSON解析エラーをチェック
+	if ( JSON_ERROR_NONE !== json_last_error() ) {
+		return [ 'error' => 'JSON解析失敗: ' . $output ];
+	}
+
+	return $output;
 }
