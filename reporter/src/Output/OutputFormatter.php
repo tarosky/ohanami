@@ -152,6 +152,13 @@ class OutputFormatter
             // データベース情報
             if (isset($site['database']['version'])) {
                 $output .= "Database: " . $site['database']['version'] . "\n";
+            } elseif (isset($site['database']['error'])) {
+                $output .= "Database: Error - " . $site['database']['error'] . "\n";
+            }
+            
+            // エラー情報の表示
+            if (!empty($site['errors'])) {
+                $output .= "Errors: " . implode(', ', $site['errors']) . "\n";
             }
             
             // プラグイン情報
