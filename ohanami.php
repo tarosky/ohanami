@@ -30,6 +30,30 @@ if ( ! chmod( $output_dir, 0700 ) ) {
 	exit;
 }
 
+// スキャン対象のディレクトリ
+$scan_dir = $home_dir . '/www/';
+$install_dir_array = ohanami_scan_directory( $scan_dir );
+
+// 各ディレクトリのWordPressバージョンを取得
+$version_results = [];
+foreach ( $install_dir_array as $install_dir ) {
+	$version = ohanami_get_wp_version( $install_dir );
+	$version_results[] = [
+		'path'      => $install_dir,
+		'version'   => $version,
+		'timestamp' => date('Y-m-d H:i:s'),
+	];
+}
+
+$text_output = [];
+foreach ( $version_results as $result ) {
+	$text_output[] = $result['path'] . ' => ' . $result['version'];
+}
+
+// すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
+file_put_contents( $output_dir . $output_file, implode( PHP_EOL, $text_output ) );
+
+
 /**
  * ディレクトリを再帰的にスキャンしてWordPressのインストールディレクトリを取得する
  *
@@ -38,7 +62,7 @@ if ( ! chmod( $output_dir, 0700 ) ) {
  * @return array
  */
 function ohanami_scan_directory( string $dir ) {
-	$result = [];
+	$install_dir_array = [];
 	// 末尾にスラッシュがついていたら後続の処理でスラッシュが重複するので取り除く
 	$dir = rtrim( $dir, '/' );
 	$files = scandir( $dir );
@@ -54,7 +78,7 @@ function ohanami_scan_directory( string $dir ) {
 			// サブディレクトリを再帰的にスキャンする
 			$sub_results = ohanami_scan_directory( $path );
 			foreach ( $sub_results as $sub ) {
-				$result[] = $sub;
+				$install_dir_array[] = $sub;
 			}
 		} else {
 			// ファイルがwp-load.phpかどうかチェックする
@@ -62,18 +86,30 @@ function ohanami_scan_directory( string $dir ) {
 				// 同階層にwp-config.phpがあるかどうか wp-config.php は「一つ上の階層でもオッケー」というルールがあるためチェックする
 				if ( file_exists( $dir . '/wp-config.php' ) || file_exists( dirname( $dir ) . '/wp-config.php' ) ) {
 					// wp-load.phpとwp-config.phpが同階層もしくはwp-config.phpが一つ上の階層にあるならば、ここはWordPressのインストールディレクトリ
-					$result[] = $dir;
+					$install_dir_array[] = $dir;
 				}
 			}
 		}
 	}
 
-	return $result;
+	return $install_dir_array;
 }
 
-// スキャン対象のディレクトリ
-$scan_dir = $home_dir . '/www/';
-$result = ohanami_scan_directory( $scan_dir );
+/**
+ * WordPressディレクトリでwp core versionコマンドを実行してバージョンを取得する
+ *
+ * @param string $dir WordPressディレクトリのパス
+ * @return string WordPressのバージョン情報
+ */
+function ohanami_get_wp_version( string $dir ) {
+	// エラーが出た場合は 2>&1 で標準エラー出力（stderr）を標準出力（stdout）にリダイレクトすることで $output に格納する
+	$command = "cd " . escapeshellarg( $dir ) . " && wp core version 2>&1";
+	// shell_exec()は引数＝コマンドをシェルで実行して標準出力を文字列として返す。失敗時はnullを返す
+	$output = shell_exec( $command );
 
-// すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
-file_put_contents( $output_dir . $output_file, implode( PHP_EOL, $result ) );
+	if ( $output === null ) {
+		return 'コマンド実行失敗';
+	}
+
+	return trim( $output );
+}
