@@ -27,15 +27,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-
             
-      - name: Install dependencies
+      - name: Install dependencies (production only)
         run: |
           cd reporter
           composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader --no-dev
           
+      - name: Install Box PHAR builder (v4)
+        run: |
+          cd reporter
+          curl -L https://github.com/box-project/box/releases/download/4.6.8/box.phar -o box.phar
+          chmod +x box.phar
+          
       - name: Build PHAR
         run: |
           cd reporter
-          ./vendor/bin/box compile
+          php box.phar compile
           
       - name: Verify PHAR build
         run: |
