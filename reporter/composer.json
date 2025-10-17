@@ -1,0 +1,25 @@
+{
+  "name": "tarosky/ohanami-reporter",
+  "description": "WordPress monitoring tool for rental servers",
+  "type": "project",
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "humbug/box": "^4.0"
+  },
+  "bin": [
+    "ohanami.phar"
+  ],
+  "autoload": {
+    "psr-4": {
+      "Ohanami\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
