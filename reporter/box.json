@@ -1,0 +1,29 @@
+{
+  "main": "src/main.php",
+  "output": "ohanami.phar",
+  "directories": [
+    "src"
+  ],
+  "files": [
+    "composer.json"
+  ],
+  "finder": [
+    {
+      "name": "*.php",
+      "in": "src"
+    }
+  ],
+  "compactors": [
+    "KevinGH\\Box\\Compactor\\Php"
+  ],
+  "compression": "GZ",
+  "stub": true,
+  "banner": [
+    "This file is part of ohanami.",
+    "",
+    "(c) TAROSKY",
+    "",
+    "For the full copyright and license information, please view the LICENSE",
+    "file that was distributed with this source code."
+  ]
+}
