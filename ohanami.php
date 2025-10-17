@@ -34,22 +34,33 @@ if ( ! chmod( $output_dir, 0700 ) ) {
 $scan_dir = $home_dir . '/www/';
 $install_dir_array = ohanami_scan_directory( $scan_dir );
 
-$ohanami_results = [];
+$ohanami_all_sites = [];
 foreach ( $install_dir_array as $install_dir ) {
-	$version = ohanami_get_wp_version( $install_dir );
-	$plugin_list = ohanami_get_wp_plugin_list( $install_dir );
+	$all_sites = ohanami_get_all_sites( $install_dir );
+	foreach ( $all_sites as $site ) {
+		$ohanami_all_sites[] = $site;
+	}
+}
+
+$ohanami_results = [];
+foreach ( $ohanami_all_sites as $site ) {
+	$version = ohanami_get_wp_version( $site['path'] );
+	$plugin_list = ohanami_get_wp_plugin_list( $site['path'], $site['blog_id'] );
 	$ohanami_results[] = [
-		'path'      => $install_dir,
-		'version'   => $version,
-		'plugin'    => $plugin_list,
-		'timestamp' => date('Y-m-d H:i:s'),
+		'path'              => $site['path'],
+		'site_url'          => $site['site_url'],
+		'site_type'         => $site['site_type'],
+		'blog_id'           => $site['blog_id'],
+		'wp_core_version'   => $version,
+		'plugin'            => $plugin_list,
+		'timestamp'         => date('Y-m-d H:i:s'),
 		];
 }
 
 // 出力テスト。実際にはjsonで渡す
 $text_output = [];
 foreach ( $ohanami_results as $result ) {
-	$text_output[] = $result['path'] . ' => ' . $result['version'] . ' Plugin_list: ' . $result['plugin'];
+	$text_output[] = $result['path'] . ' => ' . $result['wp_core_version'] . ' site_url: => ' . $result['site_url'] . ' site_type: => ' . $result['site_type'] . ' blog_id: =>' . $result['blog_id'] . ' Plugin_list: ' . $result['plugin'];
 }
 
 // すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
@@ -98,6 +109,59 @@ function ohanami_scan_directory( string $dir ) {
 }
 
 /**
+ * WordPressディレクトリにてマルチサイトかどうかをチェックし、マルチサイトならば子サイトの情報を取得する
+ *
+ * @param string $dir WordPressディレクトリのパス
+ *
+ * @return array サイトのリスト
+ */
+function ohanami_get_all_sites( string $dir ) {
+	// まずマルチサイトかチェック
+	$command = "cd " . escapeshellarg( $dir ) . " && wp config get MULTISITE 2>&1";
+	$output = shell_exec( $command );
+
+	if ( $output === null ) {
+		return [ 'error' => 'コマンド実行失敗' ];
+	}
+
+	if ( '1' !== trim( $output ) ) {
+		// シングルサイトの場合
+		return [
+			[
+				'path'      => $dir,
+				'site_url'  => trim( shell_exec( "cd " . escapeshellarg( $dir ) . " && wp option get siteurl 2>&1" ) ),
+				'site_type' => 'single',
+				'blog_id'   => '1'
+			]
+		];
+	}
+
+	// マルチサイトの場合、全サイトを取得
+	$multisite_command = "cd " . escapeshellarg( $dir ) . " && wp site list --format=json 2>&1";
+	$multisite_output = shell_exec( $multisite_command );
+
+	$sites = json_decode( trim( $multisite_output ), true );
+
+	// JSON解析エラーをチェック
+	if ( JSON_ERROR_NONE !== json_last_error() ) {
+		return [ 'error' => 'JSON解析失敗: ' . $sites ];
+	}
+
+	$result = [];
+	foreach ( $sites as $site ) {
+		$result[] = [
+			'path'      => $dir,
+			'site_url'  => $site['url'],
+			'site_type' => $site['blog_id'] == '1' ? 'multi_main' : 'multi_child',
+			'blog_id'   => $site['blog_id']
+		];
+	}
+
+	return $result;
+}
+
+
+/**
  * WordPressディレクトリでwp core versionコマンドを実行してバージョンを取得する
  *
  * @param string $dir WordPressディレクトリのパス
@@ -120,10 +184,18 @@ function ohanami_get_wp_version( string $dir ) {
  * WordPressディレクトリでwp plugin listコマンドを実行してプラグインリストを取得する
  *
  * @param string $dir WordPressディレクトリのパス
+ * @param string $blog_id
  * @return array WordPressのプラグインリスト
  */
-function ohanami_get_wp_plugin_list( string $dir ) {
-	$command = "cd " . escapeshellarg( $dir ) . " && wp plugin list --format=json 2>&1";
+function ohanami_get_wp_plugin_list( string $dir, string $blog_id  ) {
+	$command = "cd " . escapeshellarg( $dir ) . " && wp plugin list --format=json";
+
+	// マルチサイトの場合はblog_idを指定
+	if ( $blog_id !== '1' ) {
+		$command .= " --blog_id=" . escapeshellarg( $blog_id );
+	}
+
+	$command .= " 2>&1";
 	$output = shell_exec( $command );
 
 	if ( $output === null ) {
