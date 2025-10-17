@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, iconv, json, mbstring, phar
+          
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: reporter/vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('reporter/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+            
+      - name: Install dependencies
+        run: |
+          cd reporter
+          composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader --no-dev
+          
+      - name: Build PHAR
+        run: |
+          cd reporter
+          ./vendor/bin/box compile
+          
+      - name: Verify PHAR build
+        run: |
+          cd reporter
+          php ohanami.phar --help
+          ls -la ohanami.phar
+          
+      - name: Upload PHAR to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./reporter/ohanami.phar
+          asset_name: ohanami.phar
+          asset_content_type: application/x-php-archive
+          
+      - name: Create checksums
+        run: |
+          cd reporter
+          sha256sum ohanami.phar > ohanami.phar.sha256
+          md5sum ohanami.phar > ohanami.phar.md5
+          
+      - name: Upload SHA256 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./reporter/ohanami.phar.sha256
+          asset_name: ohanami.phar.sha256
+          asset_content_type: text/plain
+          
+      - name: Upload MD5 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./reporter/ohanami.phar.md5
+          asset_name: ohanami.phar.md5
+          asset_content_type: text/plain
