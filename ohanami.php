@@ -34,20 +34,21 @@ if ( ! chmod( $output_dir, 0700 ) ) {
 $scan_dir = $home_dir . '/www/';
 $install_dir_array = ohanami_scan_directory( $scan_dir );
 
-// 各ディレクトリのWordPressバージョンを取得
-$version_results = [];
+$ohanami_results = [];
 foreach ( $install_dir_array as $install_dir ) {
 	$version = ohanami_get_wp_version( $install_dir );
-	$version_results[] = [
+	$plugin_list = ohanami_get_wp_plugin_list( $install_dir );
+	$ohanami_results[] = [
 		'path'      => $install_dir,
 		'version'   => $version,
+		'plugin'    => $plugin_list,
 		'timestamp' => date('Y-m-d H:i:s'),
-	];
+		];
 }
 
 $text_output = [];
-foreach ( $version_results as $result ) {
-	$text_output[] = $result['path'] . ' => ' . $result['version'];
+foreach ( $ohanami_results as $result ) {
+	$text_output[] = $result['path'] . ' => ' . $result['version'] . ' Plugin_list: ' . $result['plugin'];
 }
 
 // すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
@@ -112,4 +113,21 @@ function ohanami_get_wp_version( string $dir ) {
 	}
 
 	return trim( $output );
+}
+
+/**
+ * WordPressディレクトリでwp plugin listコマンドを実行してプラグインリストを取得する
+ *
+ * @param string $dir WordPressディレクトリのパス
+ * @return array WordPressのプラグインリスト
+ */
+function ohanami_get_wp_plugin_list( string $dir ) {
+	$command = "cd " . escapeshellarg( $dir ) . " && wp plugin list --format=json 2>&1";
+	$output = shell_exec( $command );
+
+	if ( $output === null ) {
+		return [ 'error' => 'コマンド実行失敗' ];
+	}
+
+	return json_decode( trim( $output ), true );
 }
