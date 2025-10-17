@@ -355,7 +355,7 @@ class WordPressCollector
     }
     
     /**
-     * wp-cliコマンド実行
+     * wp-cliコマンド実行（エラーキャッチ付き）
      *
      * @param string $command
      * @param string $sitePath
@@ -363,14 +363,45 @@ class WordPressCollector
      */
     private function execWpCli(string $command, string $sitePath): ?string
     {
-        $fullCommand = sprintf('cd %s && %s %s 2>/dev/null', 
+        $fullCommand = sprintf('cd %s && %s %s 2>&1', 
             escapeshellarg($sitePath), 
             $this->wpCliPath, 
             $command
         );
         
-        $result = shell_exec($fullCommand);
+        exec($fullCommand, $output, $exitCode);
+        $result = implode("\n", $output);
         
-        return $result !== null && trim($result) !== '' ? $result : null;
+        // エラーチェック（Fatal error, Warning, etc.）
+        if ($exitCode !== 0 || $this->containsPhpError($result)) {
+            return null;
+        }
+        
+        return trim($result) !== '' ? trim($result) : null;
+    }
+    
+    /**
+     * PHP Fatal Error等をチェック
+     *
+     * @param string $output
+     * @return bool
+     */
+    private function containsPhpError(string $output): bool
+    {
+        $errorPatterns = [
+            '/Fatal error:/',
+            '/Parse error:/',
+            '/Warning:.*in.*on line/',
+            '/Notice:.*in.*on line/',
+            '/Error:/'
+        ];
+        
+        foreach ($errorPatterns as $pattern) {
+            if (preg_match($pattern, $output)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
