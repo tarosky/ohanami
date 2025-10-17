@@ -360,6 +360,7 @@ class WordPressCollector
      * @param string $command
      * @param string $sitePath
      * @return string|null
+     * @throws \Exception エラー情報を含む例外
      */
     private function execWpCli(string $command, string $sitePath): ?string
     {
@@ -373,8 +374,12 @@ class WordPressCollector
         $result = implode("\n", $output);
         
         // エラーチェック（Fatal error, Warning, etc.）
-        if ($exitCode !== 0 || $this->containsPhpError($result)) {
-            return null;
+        if ($exitCode !== 0) {
+            throw new \Exception("wp-cli exit code $exitCode: " . trim($result));
+        }
+        
+        if ($this->containsPhpError($result)) {
+            throw new \Exception("wp-cli PHP error: " . trim($result));
         }
         
         return trim($result) !== '' ? trim($result) : null;
