@@ -38,7 +38,7 @@ class WordPressCollector
     }
     
     /**
-     * ディレクトリ内のWordPressサイトを検索
+     * ディレクトリ内のWordPressサイトを検索（wp-settings.phpベース）
      *
      * @param string $directory
      * @param int $maxDepth
@@ -47,14 +47,28 @@ class WordPressCollector
      */
     public function findWordPressSites(string $directory, int $maxDepth = 3, int $currentDepth = 0): array
     {
+        // 再帰的検索を使用（globの互換性問題を回避）
+        return $this->findWordPressSitesRecursive($directory, $maxDepth, $currentDepth);
+    }
+    
+    /**
+     * 再帰的WordPressサイト検索（フォールバック用）
+     *
+     * @param string $directory
+     * @param int $maxDepth
+     * @param int $currentDepth
+     * @return array
+     */
+    private function findWordPressSitesRecursive(string $directory, int $maxDepth = 3, int $currentDepth = 0): array
+    {
         $sites = [];
         
         if ($currentDepth > $maxDepth || !is_dir($directory) || !is_readable($directory)) {
             return $sites;
         }
         
-        // 現在のディレクトリにWordPressがあるかチェック
-        if ($this->isWordPressDirectory($directory)) {
+        // wp-settings.phpの存在でWordPressサイト判定
+        if (file_exists($directory . '/wp-settings.php')) {
             $sites[] = $directory;
         }
         
@@ -71,7 +85,7 @@ class WordPressCollector
             
             $fullPath = $directory . '/' . $item;
             if (is_dir($fullPath)) {
-                $subsites = $this->findWordPressSites($fullPath, $maxDepth, $currentDepth + 1);
+                $subsites = $this->findWordPressSitesRecursive($fullPath, $maxDepth, $currentDepth + 1);
                 $sites = array_merge($sites, $subsites);
             }
         }
@@ -80,40 +94,152 @@ class WordPressCollector
     }
     
     /**
-     * ディレクトリがWordPressサイトかチェック
-     *
-     * @param string $directory
-     * @return bool
-     */
-    private function isWordPressDirectory(string $directory): bool
-    {
-        // wp-config.php または wp-settings.php が存在すればWordPressサイト
-        return file_exists($directory . '/wp-config.php') || 
-               file_exists($directory . '/wp-settings.php');
-    }
-    
-    /**
-     * 単一WordPressサイトの情報収集
+     * 単一WordPressサイトの情報収集（エラーハンドリング強化）
      *
      * @param string $sitePath
      * @return array|null
      */
     public function collectSiteInfo(string $sitePath): ?array
     {
-        // WordPressが正常にインストールされているかチェック
-        if (!$this->execWpCli('core is-installed', $sitePath)) {
-            return null;
+        try {
+            // 基本情報は必ず収集する（wp-settings.phpがあるのでWordPressサイト）
+            $siteData = [
+                'path' => $sitePath,
+                'database' => [],
+                'core' => [],
+                'plugins' => [],
+                'themes' => [],
+                'errors' => []
+            ];
+            
+            // WordPressが正常にインストールされているかチェック（古いWordPressでも継続）
+            $coreInstalled = $this->execWpCli('core is-installed', $sitePath);
+            
+            if (!$coreInstalled) {
+                // wp-cliが使えない場合でも基本情報は記録
+                $siteData['errors'][] = 'wp-cli core is-installed failed';
+                
+                // wp-config.phpから基本情報を取得試行
+                $siteData['core'] = $this->collectCoreInfoFallback($sitePath);
+            } else {
+                // 通常の情報収集
+                $siteData['database'] = $this->collectDatabaseInfoSafe($sitePath);
+                $siteData['core'] = $this->collectCoreInfoSafe($sitePath);
+                $siteData['plugins'] = $this->collectPluginsSafe($sitePath);
+                $siteData['themes'] = $this->collectThemesSafe($sitePath);
+            }
+            
+            return $siteData;
+            
+        } catch (\Exception $e) {
+            // 完全にエラーの場合でも基本情報は返す
+            return [
+                'path' => $sitePath,
+                'database' => [],
+                'core' => [],
+                'plugins' => [],
+                'themes' => [],
+                'errors' => ['Exception: ' . $e->getMessage()]
+            ];
         }
-        
-        $siteData = [
-            'path' => $sitePath,
-            'database' => $this->collectDatabaseInfo($sitePath),
-            'core' => $this->collectCoreInfo($sitePath),
-            'plugins' => $this->collectPlugins($sitePath),
-            'themes' => $this->collectThemes($sitePath),
+    }
+    
+    /**
+     * フォールバック用コア情報収集（wp-cliが使えない場合）
+     *
+     * @param string $sitePath
+     * @return array
+     */
+    private function collectCoreInfoFallback(string $sitePath): array
+    {
+        $coreInfo = [
+            'version' => null,
+            'is_multisite' => false,
+            'language' => 'unknown'
         ];
         
-        return $siteData;
+        // wp-includes/version.phpから情報取得を試行
+        $versionFile = $sitePath . '/wp-includes/version.php';
+        if (file_exists($versionFile)) {
+            try {
+                $content = file_get_contents($versionFile);
+                if ($content && preg_match('/\$wp_version = [\'"]([^\'"]+)[\'"];/', $content, $matches)) {
+                    $coreInfo['version'] = $matches[1];
+                }
+            } catch (\Exception $e) {
+                // ファイル読み込みエラーは無視
+            }
+        }
+        
+        return $coreInfo;
+    }
+    
+    /**
+     * セーフなデータベース情報収集
+     *
+     * @param string $sitePath
+     * @return array
+     */
+    private function collectDatabaseInfoSafe(string $sitePath): array
+    {
+        try {
+            return $this->collectDatabaseInfo($sitePath);
+        } catch (\Exception $e) {
+            return [
+                'version' => null,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * セーフなコア情報収集
+     *
+     * @param string $sitePath
+     * @return array
+     */
+    private function collectCoreInfoSafe(string $sitePath): array
+    {
+        try {
+            return $this->collectCoreInfo($sitePath);
+        } catch (\Exception $e) {
+            return [
+                'version' => null,
+                'is_multisite' => false,
+                'language' => 'unknown',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * セーフなプラグイン情報収集
+     *
+     * @param string $sitePath
+     * @return array
+     */
+    private function collectPluginsSafe(string $sitePath): array
+    {
+        try {
+            return $this->collectPlugins($sitePath);
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+    
+    /**
+     * セーフなテーマ情報収集
+     *
+     * @param string $sitePath
+     * @return array
+     */
+    private function collectThemesSafe(string $sitePath): array
+    {
+        try {
+            return $this->collectThemes($sitePath);
+        } catch (\Exception $e) {
+            return [];
+        }
     }
     
     /**
