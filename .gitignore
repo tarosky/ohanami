@@ -1,2 +1,6 @@
 .env
 deploy-config.json
+
+# Reporter build artifacts
+reporter/vendor/
+reporter/ohanami.phar
