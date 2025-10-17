@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd reporter
-          composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader --no-dev
+          composer install --prefer-dist --no-progress --no-suggest --optimize-autoloader
           
       - name: Build PHAR
         run: |
