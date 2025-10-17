@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "fumiki.sakura": {
+      "description": "さくらのレンタルサーバー（テスト用）",
+      "ssh_config_host": "fumiki.sakura",
+      "remote_path": "/home/fumiki/tmp/ohanami/",
+      "php_command": "php"
+    },
+    "another-server": {
+      "description": "別のサーバー例",
+      "ssh_config_host": "another-server",
+      "remote_path": "/home/user/tmp/ohanami/",
+      "php_command": "php"
+    }
+  },
+  "default_server": "fumiki.sakura"
+}
