@@ -13,23 +13,6 @@
 $info = posix_getpwuid( posix_getuid() );
 $home_dir = rtrim( $info['dir'], DIRECTORY_SEPARATOR );
 
-// 出力先ディレクトリ もしもディレクトリを直で指定する場合、始まりが home/ だと失敗するので要注意。 正：/home/ 誤：home/
-$output_dir = $home_dir . '/ohanami-data/';
-// 出力先ファイル
-$output_file = 'ohanami-result.txt';
-
-// 出力先ディレクトリが存在しない場合には作成し、作成に失敗したら以降のコードは実行されない。
-if ( ! is_dir( $output_dir ) && ! mkdir( $output_dir, 0700, true ) ) {
-	error_log( $output_dir . 'の作成に失敗しました' );
-	exit;
-}
-
-// 念のため出力先ディレクトリのパーミッションを明示的に設定。すでに0700ならばchmod()はtrueを返すので何もしない
-if ( ! chmod( $output_dir, 0700 ) ) {
-	error_log( $output_dir . 'に適切なパーミッションを設定することができませんでした' );
-	exit;
-}
-
 // スキャン対象のディレクトリ
 $scan_dir = $home_dir . '/www/';
 $install_dir_array = ohanami_scan_directory( $scan_dir );
@@ -57,14 +40,12 @@ foreach ( $ohanami_all_sites as $site ) {
 		];
 }
 
-// 出力テスト。実際にはjsonで渡す
-$text_output = [];
-foreach ( $ohanami_results as $result ) {
-	$text_output[] = $result['path'] . ' => ' . $result['wp_core_version'] . ' site_url: => ' . $result['site_url'] . ' site_type: => ' . $result['site_type'] . ' blog_id: =>' . $result['blog_id'] . ' Plugin_list: ' . $result['plugin'];
+// GCPに送信
+if ( ohanami_send_to_gcp( $ohanami_results ) ) {
+	error_log( 'ohanamiデータの送信に成功しました' );
+} else {
+	error_log( '【失敗！】ohanamiデータの送信に失敗しました' );
 }
-
-// すでにファイルが存在していれば上書き、存在しない場合は新規作成する。
-file_put_contents( $output_dir . $output_file, implode( PHP_EOL, $text_output ) );
 
 
 /**
@@ -210,4 +191,30 @@ function ohanami_get_wp_plugin_list( string $dir, string $blog_id  ) {
 	}
 
 	return $output;
+}
+
+/**
+ * データをGCPエンドポイントに送信する
+ *
+ * @param array $data 送信するデータ
+ * @return bool 送信成功/失敗
+ */
+function ohanami_send_to_gcp( array $data ) {
+	// TODO: 必要な情報を！
+	$endpoint = '/store-json';
+	$token = 'token';
+
+	$context = stream_context_create( [
+		'http' => [
+			'method' => 'POST',
+			'header' => [
+				'Content-Type: application/json',
+				'Authorization: Bearer ' . $token
+			],
+			'content' => json_encode($data)
+		]
+	] );
+
+	// HTTPリクエストを送信する
+	return file_get_contents( $endpoint, false, $context ) !== false;
 }
