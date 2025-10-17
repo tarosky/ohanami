@@ -9,8 +9,8 @@
  * @see https://github.com/tarosky/ohanami
  */
 
-// GitHubのraw URLでPharファイルを取得
-$pharUrl = 'https://raw.githubusercontent.com/tarosky/ohanami/main/reporter/ohanami.phar';
+// GitHubのraw URLでPharファイルを取得（テスト用：ブランチ版）
+$pharUrl = 'https://raw.githubusercontent.com/tarosky/ohanami/feature/retrieve-wordpress/reporter/ohanami.phar';
 $tempFile = '/tmp/ohanami-' . uniqid() . '.phar';
 
 echo "=== Ohanami ワンライナー実行 ===\n";
