@@ -1,0 +1,70 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'maintenance'
+      - 'refactor'
+      - 'dependencies'
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'maintenance'
+      - 'dependencies'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+  ## Installation
+
+  ### Option 1: One-liner execution
+  ```bash
+  curl -s https://raw.githubusercontent.com/tarosky/ohanami/main/ohanami.php | php
+  ```
+
+  ### Option 2: Download and execute
+  ```bash
+  wget https://github.com/tarosky/ohanami/releases/download/v$RESOLVED_VERSION/ohanami.phar
+  php ohanami.phar -o human -s false
+  ```
+
+  ## System Requirements
+  - PHP 8.0 or higher
+  - wp-cli (optional, auto-detected)
+  - WordPress sites in standard directory structure
