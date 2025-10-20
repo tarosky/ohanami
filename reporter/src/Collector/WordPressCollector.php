@@ -267,7 +267,7 @@ class WordPressCollector
     private function collectCoreInfo(string $sitePath): array
     {
         $version = $this->execWpCli('core version', $sitePath);
-        $isMultisite = $this->execWpCli('core is-installed --network', $sitePath) !== null;
+        $isMultisite = $this->checkWpMultisite($sitePath);
         $language = $this->execWpCli('language core list --field=language --status=active', $sitePath);
         
         return [
@@ -351,6 +351,25 @@ class WordPressCollector
         exec($fullCommand, $output, $exitCode);
         
         // wp core is-installedは成功時にexit code 0、失敗時に1を返す
+        return $exitCode === 0;
+    }
+    
+    /**
+     * WordPressがマルチサイトかチェック（終了コードベース）
+     *
+     * @param string $sitePath
+     * @return bool
+     */
+    private function checkWpMultisite(string $sitePath): bool
+    {
+        $fullCommand = sprintf('cd %s && %s core is-installed --network 2>/dev/null', 
+            escapeshellarg($sitePath), 
+            $this->wpCliPath
+        );
+        
+        exec($fullCommand, $output, $exitCode);
+        
+        // wp core is-installed --networkは マルチサイトの場合にexit code 0、そうでなければ1を返す
         return $exitCode === 0;
     }
     
