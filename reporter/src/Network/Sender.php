@@ -48,11 +48,22 @@ class Sender
         $endpoint = $_ENV['OHANAMI_ENDPOINT'] ?? $_SERVER['OHANAMI_ENDPOINT'] ?? null;
         
         if (!$endpoint) {
-            // デフォルトエンドポイント（未実装）
-            return null; // 'https://ohanami-api.example.com/report';
+            // デフォルトエンドポイント（新しいOhanami Cloud Runサービス）
+            return 'https://ohanami-prod-1031617030980.asia-northeast1.run.app/api/wordpress-report';
         }
         
         return $endpoint;
+    }
+    
+    /**
+     * 認証トークン取得
+     *
+     * @return string
+     */
+    private function getAuthToken(): string
+    {
+        // 環境変数から認証トークンを取得
+        return $_ENV['OHANAMI_AUTH_TOKEN'] ?? $_SERVER['OHANAMI_AUTH_TOKEN'] ?? 'dev-secret-key-change-in-production';
     }
     
     /**
@@ -64,18 +75,52 @@ class Sender
      */
     private function sendToEndpoint(string $endpoint, array $data): bool
     {
-        // スタブ実装：実際の送信は行わない
-        // TODO: 将来的にcURLまたはHTTPクライアントでPOST送信
+        $jsonData = json_encode($data);
+        $authToken = $this->getAuthToken();
         
-        // ログに送信予定のデータ情報を記録（デバッグ用）
+        // cURLでPOST送信
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $endpoint,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $jsonData,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Content-Length: ' . strlen($jsonData),
+                'Authorization: Bearer ' . $authToken,
+                'User-Agent: Ohanami-Reporter/1.0'
+            ]
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($error) {
+            error_log(sprintf('[Ohanami] cURL Error: %s', $error));
+            return false;
+        }
+        
+        $success = $httpCode >= 200 && $httpCode < 300;
+        
+        // ログに送信結果を記録
         error_log(sprintf(
-            '[Ohanami] Would send data to %s (Size: %d bytes, Sites: %d)', 
+            '[Ohanami] %s to %s (HTTP %d, Size: %d bytes, Sites: %d)', 
+            $success ? 'Successfully sent data' : 'Failed to send data',
             $endpoint,
-            strlen(json_encode($data)),
+            $httpCode,
+            strlen($jsonData),
             count($data['report']['wordpress']['sites'] ?? [])
         ));
         
-        return true; // スタブなので常に成功
+        if (!$success && $response) {
+            error_log(sprintf('[Ohanami] Response: %s', $response));
+        }
+        
+        return $success;
     }
     
     /**
