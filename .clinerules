@@ -1,0 +1,130 @@
+# Ohanami 開発ルール
+
+このファイルは開発者向けの技術的なガイドラインとチェックリストです。
+
+## 📋 Gitコミット前の確認事項
+
+### 1. Box PHARビルド関連
+- [ ] **GitHub Actionsでの依存関係管理を正しく設定**
+  - `composer install --no-dev`でプロダクション依存関係のみインストール
+  - Box PHAR builderは GitHub Releases から直接ダウンロード（v4.6.8）
+  - 開発ツール（phpcs, phpstan等）がPHARに含まれないことを確認
+
+### 2. エラーハンドリング
+- [ ] **wp-cli実行時のエラーハンドリング実装**
+  - 終了コードによる正確な判定（`wp core is-installed`等）
+  - Fatal Error、Parse Error、Warning等のパターンマッチング
+  - フォールバック機能（`wp-includes/version.php`からの情報取得）
+
+### 3. WordPress検出ロジック
+- [ ] **wp-settings.phpベース検出の使用**
+  - wp-config.phpの配置問題を回避
+  - 再帰的ディレクトリ検索（maxDepth設定）
+  - 古いWordPressバージョンでも動作することを確認
+
+## 🔧 GitHub Actions最適化
+
+### リリースワークフロー
+```yaml
+# ❌ 悪い例：--no-devを削除すると開発ツールも含まれる
+composer install --prefer-dist --optimize-autoloader
+
+# ✅ 良い例：プロダクション依存関係のみ + Box直接取得  
+composer install --prefer-dist --optimize-autoloader --no-dev
+curl -L https://github.com/box-project/box/releases/download/4.6.8/box.phar -o box.phar
+```
+
+### 必須チェック項目
+- [ ] Box PHARが正常にビルドされること
+- [ ] PHARサイズが適切であること（~46KB）
+- [ ] チェックサム（SHA256/MD5）が生成されること
+
+## 🚨 よくあるエラーと対処法
+
+### 1. Box PHAR builder not found
+**症状**: `/vendor/bin/box: No such file or directory`
+
+**原因**: `--no-dev`でhumbug/boxがインストールされていない
+
+**解決**: GitHub Releasesから直接ダウンロード
+```bash
+curl -L https://github.com/box-project/box/releases/download/4.6.8/box.phar -o box.phar
+chmod +x box.phar
+php box.phar compile
+```
+
+### 2. wp-cli Fatal Error
+**症状**: `Fatal error: ...` が出力されてWordPress情報取得失敗
+
+**解決**: エラーキャッチと継続処理
+```php
+// 2>&1でstderrも取得
+exec($fullCommand, $output, $exitCode);
+
+// PHPエラーパターンマッチング  
+if ($this->containsPhpError($result)) {
+    throw new \Exception("wp-cli PHP error: " . trim($result));
+}
+```
+
+### 3. WordPress検出失敗
+**症状**: `wp-config.php`があるのにWordPressとして認識されない
+
+**解決**: `wp-settings.php`ベース検出に変更
+```php
+// wp-settings.phpの存在でWordPressサイト判定
+if (file_exists($directory . '/wp-settings.php')) {
+    $sites[] = $directory;
+}
+```
+
+## 📦 リリース管理
+
+### セマンティックバージョニング
+- **MAJOR**: Breaking changes (v2.0.0)
+- **MINOR**: 新機能追加 (v1.1.0)  
+- **PATCH**: バグ修正 (v1.0.1)
+
+### リリースプロセス
+1. feature/***ブランチで開発
+2. PRマージでrelease-drafterがドラフト生成
+3. GitHubのGUIでバージョン調整・公開
+4. GitHub Actionsで自動ビルド・アセット追加
+
+### 必須テスト項目
+- [ ] ローカルでのPHARビルド成功
+- [ ] SSH経由でのテスト実行成功  
+- [ ] JSON出力の構造確認
+- [ ] エラーハンドリングの動作確認
+
+## 🔍 コード品質チェック
+
+### Safe系メソッドパターン
+エラー時も処理継続するため、各機能にSafe系メソッドを実装：
+
+```php
+private function collectCoreInfoSafe(string $sitePath): array
+{
+    try {
+        return $this->collectCoreInfo($sitePath);
+    } catch (\Exception $e) {
+        return [
+            'version' => null,
+            'error' => $e->getMessage()
+        ];
+    }
+}
+```
+
+### エラー情報記録
+問題診断のため、エラー情報は必ず記録：
+
+```php
+// ❌ 悪い例：エラーを隠蔽
+return null;
+
+// ✅ 良い例：詳細なエラー情報を記録
+return [
+    'path' => $sitePath,
+    'errors' => ['wp-cli exit code 1: Access denied for user']
+];

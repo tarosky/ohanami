@@ -144,7 +144,7 @@ WPCLI_VERSION  : 2.12.0
 - [x] SSH経由開発フロー
 
 ### Phase 2 (予定)
-- [ ] WordPress詳細情報収集（wp-cli活用）
+- [x] WordPress詳細情報収集（wp-cli活用）
 - [ ] Cloud SQL連携
 - [ ] Looker Studioダッシュボード
 
