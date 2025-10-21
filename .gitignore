@@ -5,3 +5,10 @@ deploy-config.json
 reporter/vendor/
 reporter/ohanami.phar
 *.sample.json
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate*
+terraform/terraform.tfvars*
+.terraform/
