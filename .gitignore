@@ -1,6 +1,9 @@
 .env
 deploy-config.json
+*.sample.json
+/node_modules/
 
 # Reporter build artifacts
 reporter/vendor/
 reporter/ohanami.phar
+terraform/.terraform/
