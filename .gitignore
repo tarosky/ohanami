@@ -1,6 +1,7 @@
 # config
 .env
 deploy-config.json
+/node_moduels/
 
 # Reporter build artifacts
 reporter/vendor/
